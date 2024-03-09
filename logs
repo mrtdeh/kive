@@ -1,0 +1,2 @@
+#!/bin/bash 
+docker logs dc$1-centor-$2-$1-$3-1 -f

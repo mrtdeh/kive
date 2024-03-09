@@ -1,0 +1,134 @@
+
+syntax = "proto3";
+
+
+package proto;
+option go_package = ".;proto";
+
+
+
+// close response
+message Close {}
+
+
+message EmptyRequest{}
+message InfoResponse{
+  string id = 1;
+  bool is_leader = 2;
+  int32 weight = 3;
+}
+
+
+message PingRequest{}
+message PongResponse{}
+
+message CallRequest{
+  string agent_id = 1;
+}
+message CallResponse{
+  repeated string tags = 1;
+}
+
+
+message ConnectMessage {
+ oneof msg {
+  Info info = 1;
+ }
+ message Info{
+  string id = 1;
+  string addr = 2;
+  bool is_server = 3;
+  bool is_leader = 4;
+  string DataCenter = 6;
+ }
+}
+message ConnectBackMessage {
+  string id = 1;
+}
+
+
+
+message NoticeRequest{
+  string from = 1;
+  oneof notice {
+    NodesChange nodes_change = 2;
+  }
+}
+message NodesChange {
+  string id = 1;
+  int32 action = 2;
+  DataType dataType = 3;
+  string data = 4;
+
+  enum DataType{
+    nodesList = 0;
+    nodesMap = 1;
+    nodeInfo = 2;
+  }
+}
+
+
+
+
+message KVURequest{
+  oneof request{
+    KVData kvData = 1;
+    KVSync kvSync = 2;
+    KVTimestamps kvTimestamps = 3;
+  }
+}
+message KVUResponse{
+  oneof response{
+    KVData kvData = 1;
+    KVError kvError = 2;
+  }
+}
+message KV{
+  string key = 1;
+  string value = 2;
+  string action = 3;
+  string dataCenter = 4;
+  int64 timestamp = 5;
+  string namespace = 6;
+  string id = 7;
+}
+message KVTimestamps{
+  repeated DCTimestamp timestamps = 1;
+  string from = 2;
+  // string DC = 3;
+  message DCTimestamp{
+    string DC = 1;
+    int64 timestamp = 2;
+  }
+}
+message KVData{
+  repeated KVPartition partitions = 1;
+  string from = 2;
+  string DC = 3;
+
+  message KVPartition{
+    string name = 1;
+    int64 timestamp = 2;
+    repeated KV records = 3;
+  }
+}
+message KVError{
+  string recordId = 1;
+  int32 code = 2;
+  string error = 3;
+}
+message KVSync{
+  string currentVersion = 1;
+  int64 currentTimestamp = 2;
+}
+
+
+
+service Discovery {
+  rpc GetInfo(EmptyRequest) returns (InfoResponse); // server information
+  rpc Connect(stream ConnectMessage) returns (stream ConnectBackMessage); // stream connection between child and parent
+  rpc Ping(PingRequest) returns (PongResponse); // ping any client/server
+  rpc Call(CallRequest) returns (CallResponse); // call all client/server
+  rpc KVU(stream KVURequest) returns (stream KVUResponse); // update key/value pair on any
+  rpc Notice(NoticeRequest) returns (Close);// send from server/leader to childs
+}
